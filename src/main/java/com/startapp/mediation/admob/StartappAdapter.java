@@ -1,20 +1,29 @@
-/**
+/*
  * Copyright 2020 StartApp Inc
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ * <p>
+ * if you take (copy/paste) this file to your own project
+ * change this package path to your own as well
+ * <p>
+ * if you take (copy/paste) this file to your own project
+ * change this package path to your own as well
+ * <p>
+ * if you take (copy/paste) this file to your own project
+ * change this package path to your own as well
  */
 
-/**
+/* TODO
  * if you take (copy/paste) this file to your own project
  * change this package path to your own as well
  */
@@ -23,7 +32,9 @@ package com.startapp.mediation.admob;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.net.Uri;
@@ -43,7 +54,6 @@ import com.google.android.gms.ads.AdError;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
 import com.google.android.gms.ads.formats.NativeAd;
-import com.google.android.gms.ads.formats.NativeAdOptions;
 import com.google.android.gms.ads.mediation.Adapter;
 import com.google.android.gms.ads.mediation.InitializationCompleteCallback;
 import com.google.android.gms.ads.mediation.MediationAdLoadCallback;
@@ -62,6 +72,7 @@ import com.google.android.gms.ads.mediation.customevent.CustomEventInterstitialL
 import com.google.android.gms.ads.mediation.customevent.CustomEventNative;
 import com.google.android.gms.ads.mediation.customevent.CustomEventNativeListener;
 import com.google.android.gms.ads.rewarded.RewardItem;
+import com.startapp.mediation.common.StartAppMediationExtras;
 import com.startapp.sdk.ads.banner.Banner;
 import com.startapp.sdk.ads.banner.BannerBase;
 import com.startapp.sdk.ads.banner.BannerListener;
@@ -80,9 +91,6 @@ import com.startapp.sdk.adsbase.adlisteners.AdEventListener;
 import com.startapp.sdk.adsbase.adlisteners.VideoListener;
 import com.startapp.sdk.adsbase.model.AdPreferences;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -92,6 +100,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Keep
+@SuppressWarnings("deprecation")
 public class StartappAdapter extends Adapter implements CustomEventInterstitial, CustomEventBanner, MediationRewardedAd, CustomEventNative {
     private static final String LOG_TAG = StartappAdapter.class.getSimpleName();
 
@@ -111,58 +120,9 @@ public class StartappAdapter extends Adapter implements CustomEventInterstitial,
     // endregion
 
     //region Extras
-    public enum Mode {
-        OFFERWALL,
-        VIDEO,
-        OVERLAY
-    }
-
-    public enum Size {
-        SIZE72X72,
-        SIZE100X100,
-        SIZE150X150,
-        SIZE340X340,
-        SIZE1200X628
-    }
-
-    public static class Extras {
-        private static final String AD_TAG = "adTag";
-        private static final String INTERSTITIAL_MODE = "interstitialMode";
-        private static final String MIN_CPM = "minCPM";
-        private static final String MUTE_VIDEO = "muteVideo";
-        private static final String IS_3D_BANNER = "is3DBanner";
-        private static final String NATIVE_IMAGE_SIZE = "nativeImageSize";
-        private static final String NATIVE_SECONDARY_IMAGE_SIZE = "nativeSecondaryImageSize";
-        private static final String APP_ID = "startappAppId";
-
-        @NonNull
-        private final AdPreferences adPreferences;
-
-        @NonNull
-        AdPreferences getAdPreferences() {
-            return adPreferences;
-        }
-
-        private boolean is3DBanner;
-
+    public static class Extras extends StartAppMediationExtras {
         boolean is3DBanner() {
-            return is3DBanner;
-        }
-
-        @Nullable
-        private StartAppAd.AdMode adMode;
-
-        @Nullable
-        StartAppAd.AdMode getAdMode() {
-            return adMode;
-        }
-
-        @Nullable
-        private String appId;
-
-        @Nullable
-        public String getAppId() {
-            return appId;
+            return isBanner3d();
         }
 
         Extras(
@@ -170,33 +130,32 @@ public class StartappAdapter extends Adapter implements CustomEventInterstitial,
                 @Nullable Bundle customEventExtras,
                 @Nullable String serverParameter
         ) {
-            adPreferences = makeAdPreferences(customEventExtras, serverParameter, false, null);
-            setKeywords(adPreferences, mediationAdRequest);
-            setLocation(adPreferences, mediationAdRequest);
+            super(customEventExtras, serverParameter, false, false);
+            setKeywords(getAdPreferences(), mediationAdRequest);
+            setLocation(getAdPreferences(), mediationAdRequest);
         }
 
+        @SuppressWarnings("ConstantConditions")
         Extras(
                 @NonNull NativeMediationAdRequest mediationAdRequest,
                 @Nullable Bundle customEventExtras,
                 @Nullable String serverParameter
         ) {
-            adPreferences = makeAdPreferences(customEventExtras, serverParameter, true, mediationAdRequest.getNativeAdOptions());
-            setKeywords(adPreferences, mediationAdRequest);
-            setLocation(adPreferences, mediationAdRequest);
+            super(customEventExtras, serverParameter, true, mediationAdRequest.getNativeAdOptions() != null && !mediationAdRequest.getNativeAdOptions().shouldReturnUrlsForImageAssets());
+            setKeywords(getAdPreferences(), mediationAdRequest);
+            setLocation(getAdPreferences(), mediationAdRequest);
         }
 
         Extras(@NonNull MediationRewardedAdConfiguration configuration) {
-            Bundle serverParameters = configuration.getServerParameters();
-            String serverParameter = serverParameters.getString("parameter");
-
-            adPreferences = makeAdPreferences(configuration.getMediationExtras(), serverParameter, false, null);
+            super(configuration.getMediationExtras(), configuration.getServerParameters().getString("parameter"), false, false);
 
             if (configuration.getLocation() != null) {
-                adPreferences.setLongitude(configuration.getLocation().getLongitude());
-                adPreferences.setLatitude(configuration.getLocation().getLatitude());
+                getAdPreferences().setLongitude(configuration.getLocation().getLongitude());
+                getAdPreferences().setLatitude(configuration.getLocation().getLatitude());
             }
         }
 
+        @SuppressWarnings("ConstantConditions")
         private static void setKeywords(@NonNull AdPreferences prefs, @NonNull MediationAdRequest request) {
             Set<String> keywords = request.getKeywords();
             if (keywords == null) {
@@ -211,6 +170,7 @@ public class StartappAdapter extends Adapter implements CustomEventInterstitial,
             prefs.setKeywords(sb.substring(0, sb.length() - 1));
         }
 
+        @SuppressWarnings("ConstantConditions")
         private static void setLocation(@NonNull AdPreferences prefs, @NonNull MediationAdRequest request) {
             Location location = request.getLocation();
             if (location == null) {
@@ -221,197 +181,9 @@ public class StartappAdapter extends Adapter implements CustomEventInterstitial,
             prefs.setLatitude(request.getLocation().getLatitude());
         }
 
-        @NonNull
-        private AdPreferences makeAdPreferences(
-                @Nullable Bundle customEventExtras,
-                @Nullable String serverParameter,
-                boolean isNative,
-                @Nullable NativeAdOptions nativeAdOptions
-        ) {
-            String adTag = null;
-            boolean isVideoMuted = false;
-            Double minCPM = null;
-            StartappAdapter.Size nativeImageSize = null;
-            StartappAdapter.Size nativeSecondaryImageSize = null;
-
-            if (customEventExtras != null) {
-                adTag = customEventExtras.getString(AD_TAG);
-                isVideoMuted = customEventExtras.getBoolean(MUTE_VIDEO);
-                is3DBanner = customEventExtras.getBoolean(IS_3D_BANNER);
-
-                if (customEventExtras.containsKey(MIN_CPM)) {
-                    minCPM = customEventExtras.getDouble(MIN_CPM);
-                }
-
-                if (customEventExtras.containsKey(INTERSTITIAL_MODE)) {
-                    final Mode srcAdMode = (Mode) customEventExtras.getSerializable(INTERSTITIAL_MODE);
-                    if (srcAdMode != null) {
-                        switch (srcAdMode) {
-                            case OVERLAY:
-                                adMode = StartAppAd.AdMode.OVERLAY;
-                                break;
-                            case VIDEO:
-                                adMode = StartAppAd.AdMode.VIDEO;
-                                break;
-                            case OFFERWALL:
-                                adMode = StartAppAd.AdMode.OFFERWALL;
-                                break;
-                        }
-                    }
-                }
-
-                if (customEventExtras.containsKey(NATIVE_IMAGE_SIZE)) {
-                    nativeImageSize = (StartappAdapter.Size) customEventExtras.getSerializable(NATIVE_IMAGE_SIZE);
-                }
-
-                if (customEventExtras.containsKey(NATIVE_SECONDARY_IMAGE_SIZE)) {
-                    nativeSecondaryImageSize = (StartappAdapter.Size) customEventExtras.getSerializable(NATIVE_SECONDARY_IMAGE_SIZE);
-                }
-            }
-
-            if (serverParameter != null) {
-                try {
-                    final JSONObject json = new JSONObject(serverParameter);
-                    Log.v(LOG_TAG, "Startapp serverParameter:" + json.toString());
-
-                    if (json.has(AD_TAG)) {
-                        adTag = json.getString(AD_TAG);
-                    }
-
-                    if (json.has(MUTE_VIDEO)) {
-                        isVideoMuted = json.getBoolean(MUTE_VIDEO);
-                    }
-
-                    if (json.has(IS_3D_BANNER)) {
-                        is3DBanner = json.getBoolean(IS_3D_BANNER);
-                    }
-
-                    if (json.has(MIN_CPM)) {
-                        minCPM = json.getDouble(MIN_CPM);
-                    }
-
-                    if (json.has(NATIVE_IMAGE_SIZE)) {
-                        final String name = json.getString(NATIVE_IMAGE_SIZE);
-                        try {
-                            nativeImageSize = StartappAdapter.Size.valueOf(name);
-                        } catch (IllegalArgumentException e) {
-                            Log.e(LOG_TAG, "Could not parse imageSize parameter: " + name);
-                        }
-                    }
-
-                    if (json.has(NATIVE_SECONDARY_IMAGE_SIZE)) {
-                        final String name = json.getString(NATIVE_SECONDARY_IMAGE_SIZE);
-                        try {
-                            nativeSecondaryImageSize = StartappAdapter.Size.valueOf(name);
-                        } catch (IllegalArgumentException e) {
-                            Log.e(LOG_TAG, "Could not parse secondaryImageSize parameter: " + name);
-                        }
-                    }
-
-                    if (json.has(INTERSTITIAL_MODE)) {
-                        final String mode = json.getString(INTERSTITIAL_MODE);
-                        switch (mode) {
-                            case "OVERLAY":
-                                adMode = StartAppAd.AdMode.OVERLAY;
-                                break;
-                            case "VIDEO":
-                                adMode = StartAppAd.AdMode.VIDEO;
-                                break;
-                            case "OFFERWALL":
-                                adMode = StartAppAd.AdMode.OFFERWALL;
-                                break;
-                        }
-                    }
-
-                    if (json.has(APP_ID)) {
-                        appId = json.getString(APP_ID);
-                    }
-                } catch (JSONException e) {
-                    Log.e(LOG_TAG, "Could not parse malformed JSON: " + serverParameter);
-                }
-            }
-
-            NativeAdPreferences nativeAdPrefs = null;
-            AdPreferences prefs;
-            if (isNative) {
-                nativeAdPrefs = new NativeAdPreferences();
-                prefs = nativeAdPrefs;
-            } else {
-                prefs = new AdPreferences();
-            }
-
-            prefs.setAdTag(adTag);
-            prefs.setMinCpm(minCPM);
-
-            if (isVideoMuted) {
-                prefs.muteVideo();
-            }
-
-            if (isNative) {
-                if (nativeImageSize != null) {
-                    nativeAdPrefs.setPrimaryImageSize(nativeImageSize.ordinal());
-                }
-
-                if (nativeSecondaryImageSize != null) {
-                    nativeAdPrefs.setSecondaryImageSize(nativeSecondaryImageSize.ordinal());
-                }
-
-                nativeAdPrefs.setAutoBitmapDownload(nativeAdOptions != null && !nativeAdOptions.shouldReturnUrlsForImageAssets());
-            }
-
-            return prefs;
-        }
-
-        public static class Builder {
-            @NonNull
-            final Bundle extras = new Bundle();
-
-            @NonNull
-            public Builder setAdTag(@NonNull String adTag) {
-                extras.putString(AD_TAG, adTag);
-                return this;
-            }
-
-            @NonNull
-            public Builder setInterstitialMode(@NonNull Mode interstitialMode) {
-                extras.putSerializable(INTERSTITIAL_MODE, interstitialMode);
-                return this;
-            }
-
-            @NonNull
-            public Builder setMinCPM(double cpm) {
-                extras.putDouble(MIN_CPM, cpm);
-                return this;
-            }
-
-            @NonNull
-            public Builder setNativeImageSize(@NonNull StartappAdapter.Size size) {
-                extras.putSerializable(NATIVE_IMAGE_SIZE, size);
-                return this;
-            }
-
-            @NonNull
-            public Builder setNativeSecondaryImageSize(@NonNull StartappAdapter.Size size) {
-                extras.putSerializable(NATIVE_SECONDARY_IMAGE_SIZE, size);
-                return this;
-            }
-
-            @NonNull
-            public Builder muteVideo() {
-                extras.putBoolean(MUTE_VIDEO, true);
-                return this;
-            }
-
-            @NonNull
-            public Builder enable3DBanner() {
-                extras.putBoolean(IS_3D_BANNER, true);
-                return this;
-            }
-
-            @NonNull
-            public Bundle toBundle() {
-                return extras;
-            }
+        @SuppressWarnings("unused")
+        public static class Builder extends StartAppMediationExtras.Builder {
+            // none
         }
     }
     //endregion
@@ -420,7 +192,7 @@ public class StartappAdapter extends Adapter implements CustomEventInterstitial,
     private static final AtomicBoolean isInitialized = new AtomicBoolean(false);
 
     private static void initializeIfNecessary(@NonNull Context context, @Nullable String appId, boolean testAds) {
-        if (TextUtils.isEmpty(appId)) {
+        if (appId == null || appId.trim().length() < 1) {
             Log.e("StartAppSDK", "App ID not found\n" +
                     "+-----------------------------------------------------------------------+\n" +
                     "|                S   T   A   R   T   A   P   P                          |\n" +
@@ -483,8 +255,8 @@ public class StartappAdapter extends Adapter implements CustomEventInterstitial,
             }
 
             @Override
-            public void onFailedToReceiveAd(@NonNull Ad ad) {
-                final String message = ad.getErrorMessage();
+            public void onFailedToReceiveAd(@Nullable Ad ad) {
+                String message = ad != null ? ad.getErrorMessage() : null;
                 Log.v(LOG_TAG, "ad loading failed: " + message);
                 listener.onAdFailedToLoad(messageToError(message));
             }
@@ -728,8 +500,8 @@ public class StartappAdapter extends Adapter implements CustomEventInterstitial,
             }
 
             @Override
-            public void onFailedToReceiveAd(@NonNull Ad ad) {
-                String message = ad.getErrorMessage();
+            public void onFailedToReceiveAd(@Nullable Ad ad) {
+                String message = ad != null ? ad.getErrorMessage() : null;
                 Log.v(LOG_TAG, "ad loading failed: " + message);
                 loadCallback.onFailure(messageToError(message));
             }
@@ -821,8 +593,8 @@ public class StartappAdapter extends Adapter implements CustomEventInterstitial,
             }
 
             @Override
-            public void onFailedToReceiveAd(@NonNull Ad ad) {
-                final String message = ad.getErrorMessage();
+            public void onFailedToReceiveAd(@Nullable Ad ad) {
+                final String message = ad != null ? ad.getErrorMessage() : null;
                 Log.v(LOG_TAG, "ad loading failed: " + message);
                 listener.onAdFailedToLoad(messageToError(message));
             }
@@ -932,12 +704,13 @@ public class StartappAdapter extends Adapter implements CustomEventInterstitial,
             this.bitmap = bitmap;
         }
 
+        @NonNull
         @Override
-        @Nullable
         public Drawable getDrawable() {
             if (bitmap == null) {
-                return null;
+                return new ColorDrawable(Color.TRANSPARENT);
             }
+
             return new BitmapDrawable(context.getResources(), bitmap);
         }
 
